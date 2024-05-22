@@ -31,6 +31,12 @@ export type TransactionFailedEvent = DomainEvent<{
   reason: Error;
 }>;
 
+export const TRANS_FINISH_EVENT_NAME = 'transactionFinish';
+
+export type TransactionFinishEvent = DomainEvent<{
+  sessionId: UUID;
+}>;
+
 export const TRANS_FAILED_EVENT_NAME = 'transactionValidateFailed';
 
 export const transferMoney =
@@ -86,4 +92,14 @@ export const transferMoney =
           }),
       ),
     );
+  };
+
+export const finishTransaction =
+  (deps: { eventBus: EventBus }) => (params: { transactionId: UUID }) => {
+    deps.eventBus.emit({
+      name: TRANS_FINISH_EVENT_NAME,
+      data: {
+        sessionId: params.transactionId,
+      },
+    });
   };

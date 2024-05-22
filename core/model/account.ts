@@ -188,4 +188,5 @@ export const accountTrait = {
   parse: parseAccount,
   addTransactionIn,
   addTransactionOut,
+  openNewAccount,
 };

@@ -1,4 +1,4 @@
-import { UUID } from 'crypto';
+import { UUID } from 'core/model/vo';
 import * as TE from 'fp-ts/TaskEither';
 export interface Repo<AGRoot> {
   add(task: AGRoot): TE.TaskEither<Error, void>;
