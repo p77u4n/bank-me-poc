@@ -1,0 +1,2 @@
+// Aggregate User
+interface User {}
