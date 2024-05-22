@@ -143,7 +143,7 @@ const addTransactionOut = (
     amount,
     to: targetAcc.id,
   });
-  pipe(
+  return pipe(
     transactionOut,
     Either.chain((newTrans) => {
       const isValidOut = newTrans.amount < acc.balance;
@@ -169,7 +169,7 @@ const addTransactionIn = (
     amount,
     from: sourceAgg.id,
   });
-  pipe(
+  return pipe(
     transactionIn,
     Either.chain((newTrans) => {
       const isValidIn = true; // do some validate check
