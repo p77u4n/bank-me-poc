@@ -1,11 +1,10 @@
-import { Balance, UUID, parseUUID } from './vo';
+import { Balance, UUID, parseBalance, parseUUID } from './vo';
 import { pipe } from 'fp-ts/function';
 import * as Either from 'fp-ts/Either';
+import * as Option from 'fp-ts/Option';
 import { v4 as uuidv4 } from 'uuid';
 import { P, match } from 'ts-pattern';
 import {
-  TransInParams,
-  TransOutParams,
   TransactionGeneral,
   TransactionIn,
   TransactionOut,
@@ -16,20 +15,26 @@ import {
 } from './transaction';
 import { AggUser } from './user';
 import { descend, prop, sortWith } from 'ramda';
+import { DomainEvent, EventBus } from 'core/events/event-bus.base';
 
 export interface AccountAgg {
   id: UUID; // should use internal id like incremental integer, but for the sake of simplicity i use UUID here instead
   ownerId: UUID;
   balance: Balance;
-  transactionsIn: TransactionIn[];
-  transactionsOut: TransactionOut[];
 }
+
+export const ACCOUNT_INIT_SUCCESS = 'accountInitSuccess';
+
+export type AccountInitSuccessEvent = DomainEvent<{
+  accountId: UUID;
+  sessionId: UUID;
+  balance: Balance;
+}>;
 
 type AccountInitParams = {
   id: string;
   ownerId: string;
-  transactionsIn: TransInParams[];
-  transactionsOut: TransOutParams[];
+  balance: number;
 };
 
 export const parseAccount = (params: AccountInitParams) =>
@@ -37,41 +42,20 @@ export const parseAccount = (params: AccountInitParams) =>
     parseUUID(params.id),
     Either.bindTo('uuid'),
     Either.bind('ownerId', () => parseUUID(params.ownerId)),
-    Either.bind('transactionsIn', () =>
-      pipe(
-        params.transactionsIn,
-        Either.traverseArray((tranInParams) => parseTranIn(tranInParams)),
-      ),
-    ),
-    Either.bind('transactionsOut', () =>
-      pipe(
-        params.transactionsOut,
-        Either.traverseArray((tranOutParams) => parseTranOut(tranOutParams)),
-      ),
-    ),
-    Either.bind('balance', ({ transactionsIn, transactionsOut }) =>
-      getBalanceFromTransactions(
-        transactionsIn as TransactionIn[],
-        transactionsOut as TransactionOut[],
-      ),
-    ),
-    Either.chain(
-      ({ uuid, balance, transactionsIn, transactionsOut, ownerId }) => {
-        // more validation here if need
-        return Either.right({
-          id: uuid,
-          ownerId,
-          balance,
-          transactionsIn,
-          transactionsOut,
-        } as AccountAgg);
-      },
-    ),
+    Either.bind('balance', () => parseBalance(params.balance)),
+    Either.chain(({ uuid, balance, ownerId }) => {
+      // more validation here if need
+      return Either.right({
+        id: uuid,
+        ownerId,
+        balance,
+      } as AccountAgg);
+    }),
   );
 
 const getBalanceFromTransactions = (
-  inTrans: TransactionIn[],
-  outTrans: TransactionOut[],
+  inTrans: readonly TransactionIn[],
+  outTrans: readonly TransactionOut[],
 ) =>
   Either.tryCatch(
     () => {
@@ -93,40 +77,45 @@ const getBalanceFromTransactions = (
     (e) => e as Error,
   );
 
-export const openNewAccount = (params: { user: AggUser }) => {
-  const INIT_DEPOSIT_AMOUNT = 10;
-  const validate = (user: AggUser) => {
-    const isQualifiedToOpenAccount = () => {
-      /// check if user is qualified for opening new account
-      return true;
+export const openNewAccount =
+  (eventBus: EventBus) => (params: { user: AggUser }) => {
+    const INIT_DEPOSIT_AMOUNT = 10;
+    const validate = (user: AggUser) => {
+      const isQualifiedToOpenAccount = () => {
+        /// check if user is qualified for opening new account
+        return true;
+      };
+      return Either.fromPredicate(isQualifiedToOpenAccount, () =>
+        Error('USER_NOT_QUALIFIED'),
+      )(user);
     };
-    return Either.fromPredicate(isQualifiedToOpenAccount, () =>
-      Error('USER_NOT_QUALIFIED'),
-    )(user);
-  };
-  return pipe(
-    params.user,
-    validate,
-    Either.bindTo('user'),
-    Either.bind('tran', () =>
-      parseTranIn({
-        from: undefined,
-        amount: INIT_DEPOSIT_AMOUNT,
-        date: new Date(Date.now()),
-      }),
-    ),
-    Either.map(
-      ({ user, tran }) =>
-        ({
+    return pipe(
+      params.user,
+      validate,
+      Either.bindTo('user'),
+      Either.bind('acc', ({ user }) =>
+        parseAccount({
           id: uuidv4(),
           ownerId: user.id,
-          balance: tran.amount as unknown as Balance, // adhoc for simplicity
-          transactionsIn: [tran],
-          transactionsOut: [],
-        }) as AccountAgg,
-    ),
-  );
-};
+          balance: 0,
+        }),
+      ),
+      Either.chain(({ acc }) =>
+        addTransactionIn(acc, Option.none, INIT_DEPOSIT_AMOUNT, new Date()),
+      ),
+      Either.tap((acc) => {
+        eventBus.emit<AccountInitSuccessEvent>({
+          name: ACCOUNT_INIT_SUCCESS,
+          data: {
+            accountId: acc.id,
+            balance: acc.balance,
+            sessionId: uuidv4() as UUID,
+          },
+        });
+        return Either.right(null);
+      }),
+    );
+  };
 
 // this method only for validate if the current state of
 // acc can invoke an transaction for sending money, or
@@ -151,7 +140,6 @@ const addTransactionOut = (
         ? Either.right({
             ...acc,
             amount: acc.balance - newTrans.amount,
-            transactionsOut: acc.transactionsOut.concat(newTrans),
           } as AccountAgg)
         : Either.left(new Error('INVALID_OUT_AMOUNT'));
     }),
@@ -160,14 +148,16 @@ const addTransactionOut = (
 
 const addTransactionIn = (
   acc: AccountAgg,
-  sourceAgg: AccountAgg,
+  sourceAgg: Option.Option<AccountAgg>,
   amount: number,
   date: Date,
 ) => {
   const transactionIn = parseTranIn({
     date,
     amount,
-    from: sourceAgg.id,
+    from: Option.getOrElse(() => undefined)(
+      Option.map((agg: AccountAgg) => agg.id)(sourceAgg),
+    ),
   });
   return pipe(
     transactionIn,
@@ -177,7 +167,6 @@ const addTransactionIn = (
         ? Either.right({
             ...acc,
             amount: acc.balance + newTrans.amount,
-            transactionsIn: acc.transactionsIn.concat(newTrans),
           } as AccountAgg)
         : Either.left(new Error('INVALID_IN_AMOUNT'));
     }),
@@ -189,4 +178,5 @@ export const accountTrait = {
   addTransactionIn,
   addTransactionOut,
   openNewAccount,
+  getBalanceFromTransactions,
 };

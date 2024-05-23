@@ -1,4 +1,4 @@
-import { EventBus, EventHandler } from 'core/events/event-bus.base';
+import { EventHandler } from 'core/events/event-bus.base';
 import { TransactionFinishEvent } from 'core/service/account';
 import * as Reader from 'fp-ts/Reader';
 import * as TE from 'fp-ts/TaskEither';
@@ -6,7 +6,7 @@ import { DMTransaction } from 'infra/db-typeorm/entities';
 import { DataSource } from 'typeorm';
 
 export const TransactionFinish: Reader.Reader<
-  { datasource: DataSource; eventBus: EventBus },
+  { datasource: DataSource },
   EventHandler<TransactionFinishEvent>
 > =
   ({ datasource }) =>

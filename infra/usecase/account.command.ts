@@ -1,7 +1,10 @@
-import { AccountAgg, accountTrait } from 'core/model/account';
+import { accountTrait } from 'core/model/account';
 import { AccountRepo } from 'core/repo/account.repo';
 import { UserRepo } from 'core/repo/user.repo';
-import { AccountUsecaseCommand } from 'core/usecase/account.command';
+import {
+  AccountCreateDTO,
+  AccountUsecaseCommand,
+} from 'core/usecase/account.command';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 import { pipe } from 'fp-ts/lib/function';
 import * as TE from 'fp-ts/lib/TaskEither';
@@ -15,37 +18,44 @@ export class DefaultAccountCommandHandler implements AccountUsecaseCommand {
     private userRepo: UserRepo,
     private eventBus: EventBus,
   ) {}
-  openNewAccount(userId: string): TaskEither<Error, AccountAgg> {
+
+  openNewAccount(commandParams: {
+    userId: string;
+  }): TaskEither<Error, AccountCreateDTO> {
     return pipe(
-      userId as UUID,
+      commandParams.userId as UUID,
       this.userRepo.findById,
-      TE.chain((user) => TE.fromEither(accountTrait.openNewAccount({ user }))),
+      TE.chain((user) =>
+        TE.fromEither(accountTrait.openNewAccount(this.eventBus)({ user })),
+      ),
       TE.chain((acc) =>
         pipe(
           acc,
           this.accountRepo.add,
-          TE.map(() => acc),
+          TE.map(() => ({
+            accountId: acc.id,
+          })),
         ),
       ),
     );
   }
 
-  transferMoney(
-    sourceAccId: string,
-    targetAccId: string,
-    amount: number,
-  ): TaskEither<Error, any> {
+  transferMoney(commandParams: {
+    sourceAccId: string;
+    targetAccId: string;
+    amount: number;
+  }): TaskEither<Error, any> {
     return pipe(
-      this.accountRepo.findById(sourceAccId as UUID),
+      this.accountRepo.findById(commandParams.sourceAccId as UUID),
       TE.bindTo('sourceAcc'),
       TE.bind('targetAcc', () =>
-        this.accountRepo.findById(targetAccId as UUID),
+        this.accountRepo.findById(commandParams.targetAccId as UUID),
       ),
       TE.tapIO(
         ({ sourceAcc, targetAcc }) =>
           () =>
             transferMoney({ eventBus: this.eventBus })({
-              amount,
+              amount: commandParams.amount,
               sourceAcc,
               targetAcc,
             }),

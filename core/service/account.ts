@@ -4,6 +4,7 @@ import { AccountAgg, accountTrait } from 'core/model/account';
 import { pipe } from 'fp-ts/lib/function';
 import { UUID } from 'core/model/vo';
 import { v4 as uuidv4 } from 'uuid';
+import * as Option from 'fp-ts/lib/Option';
 
 export type TransactionStartEvent = DomainEvent<{
   sessionId: UUID;
@@ -60,7 +61,12 @@ export const transferMoney =
     });
 
     const validateTrans = pipe(
-      accountTrait.addTransactionIn(targetAcc, sourceAcc, amount, date),
+      accountTrait.addTransactionIn(
+        targetAcc,
+        Option.some(sourceAcc),
+        amount,
+        date,
+      ),
       Either.bindTo('checkTranIn'),
       Either.bind('checkTranOut', () =>
         accountTrait.addTransactionOut(sourceAcc, targetAcc, amount, date),

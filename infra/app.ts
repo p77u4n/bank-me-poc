@@ -13,8 +13,14 @@ import { TransactionFinishValidate } from './event-listener/transaction-validate
 import { SimpleEventBus } from 'core/events/simple.event-bus';
 import { PostgresUserRepo } from './repo/pg.user';
 import { PostgresAccountRepo } from './repo/pg.account';
-import { DefaultAccountCommandHandler } from './usecase/account';
+import { DefaultAccountCommandHandler } from './usecase/account.command';
 import { Registry } from './registry.base';
+import { ACCOUNT_INIT_SUCCESS } from 'core/model/account';
+import { AccountInitFinishEventHandler } from './event-listener/account-init-success';
+import { TransactionFailed } from './event-listener/transaction-failed';
+import { TransactionFinish } from './event-listener/transaction-finish';
+import { DefaultAccountQuery } from './usecase/account.query';
+import { DefaultUserUsecaseCommandHandler } from './usecase/user.command';
 
 configDotenv();
 
@@ -29,11 +35,15 @@ const configEventSubs = (eventBus: EventBus) => {
   );
   eventBus.on(
     TRANS_FAILED_EVENT_NAME,
-    TransactionFinishValidate({ datasource: postgresDTsource, eventBus }),
+    TransactionFailed({ datasource: postgresDTsource }),
   );
   eventBus.on(
     TRANS_FINISH_EVENT_NAME,
-    TransactionFinishValidate({ datasource: postgresDTsource, eventBus }),
+    TransactionFinish({ datasource: postgresDTsource }),
+  );
+  eventBus.on(
+    ACCOUNT_INIT_SUCCESS,
+    AccountInitFinishEventHandler({ datasource: postgresDTsource }),
   );
 };
 
@@ -43,11 +53,13 @@ const getSingleRegistry: () => Registry = () => {
   const userRepo = new PostgresUserRepo();
   const accountRepo = new PostgresAccountRepo();
   return {
-    commandService: new DefaultAccountCommandHandler(
+    accountCommandHandler: new DefaultAccountCommandHandler(
       accountRepo,
       userRepo,
       eventBus,
     ),
+    accountQueryHandler: new DefaultAccountQuery(accountRepo),
+    userCommandHandler: new DefaultUserUsecaseCommandHandler(userRepo),
   };
 };
 

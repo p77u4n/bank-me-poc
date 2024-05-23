@@ -43,7 +43,10 @@ export class DMAccount {
   user_id: string;
 
   @Column({ type: 'float', nullable: true })
-  balance: number;
+  balance: number; // only for snapshot
+
+  @Column({ type: 'boolean', nullable: true })
+  is_ready: boolean;
 }
 
 @Entity('transaction_store')
@@ -96,4 +99,10 @@ export class DMTransaction {
     nullable: true,
   })
   reason: string;
+
+  @Column({
+    type: 'timestamptz',
+    nullable: true,
+  })
+  date: Date;
 }

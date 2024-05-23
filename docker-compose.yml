@@ -1,0 +1,24 @@
+version: '3.3'
+
+services:
+  mock_postgres:
+    container_name: mock_postgres 
+    image: postgres
+    env_file:
+      - ./deploy/postgres/.example.env
+    volumes:
+      - ./deploy/postgres/data:/data/postgres
+    ports:
+      - "5434:5432"
+    networks:
+      - poc-network 
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${POSTGRES_USER}', '-d', '${POSTGRES_PASSWORD}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+networks:
+  poc-network:
+    external: false
+    name: poc-network

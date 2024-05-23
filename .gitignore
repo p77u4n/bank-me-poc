@@ -8,6 +8,7 @@ __pycache__
 **/*.env*
 !**/*.example.env*
 !deploy/*.env*
+deploy/postgres/data
 
 **/*/build
 

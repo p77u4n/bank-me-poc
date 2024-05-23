@@ -1,18 +1,17 @@
 {
   "name": "bank-me-qfexso",
   "version": "1.0.0",
-  "main": "index.js",
   "repository": "http://linagora-1-kascko@git.codesubmit.io/linagora-1/bank-me-qfexso",
   "author": "TuanCR <tuancr.pt@gmail.com>",
   "license": "MIT",
   "scripts": {
     "build": "rimraf dist/cjs && tsc --project ./tsconfig.json --outdir ./dist/cjs",
-    "typeorm": "npm run build && npx typeorm -d dist/cjs/database-typeorm/datasource.js",
+    "typeorm": "npm run build && npx typeorm -d dist/cjs/infra/db-typeorm/datasource.js",
     "migration:generate": "npm run typeorm -- migration:generate database-typeorm/migrations/$0",
     "migration:run": "npm run build && npm run typeorm -- migration:run",
-    "service:start": "NODE_PATH=dist/cjs/ node dist/cjs/app.js",
-    "express-rest:dev": "concurrently \"tsc --project ./tsconfig.json --outdir dist/cjs --watch\" \"NODE_PATH=dist/cjs/ nodemon -q dist/cjs/app.js\"",
-    "service:dev": "concurrently \"tsc --project ./tsconfig.json --outdir dist/cjs --watch\" \"NODE_PATH=dist/cjs/ nodemon -q dist/cjs/app.js\""
+    "service:start": "NODE_PATH=dist/cjs/ node dist/cjs/infra/app.js",
+    "express-rest:dev": "concurrently \"tsc --project ./tsconfig.json --outdir dist/cjs --watch\" \"NODE_PATH=dist/cjs/ nodemon -q dist/cjs/infra/app.js\"",
+    "service:dev": "concurrently \"tsc --project ./tsconfig.json --outdir dist/cjs --watch\" \"NODE_PATH=dist/cjs/ nodemon -q dist/cjs/infra/app.js\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.563.0",
@@ -66,5 +65,6 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.1.0",
     "typescript": "^5.4.5"
-  }
+  },
+  "packageManager": "yarn@4.1.1"
 }
