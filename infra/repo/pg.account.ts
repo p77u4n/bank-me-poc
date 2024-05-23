@@ -19,6 +19,15 @@ export class PostgresAccountRepo implements AccountRepo {
   private accRepository = postgresDTsource.getRepository(DMAccount);
   private datasource = postgresDTsource;
 
+  constructor() {
+    this.add = this.add.bind(this);
+    this.findById = this.findById.bind(this);
+    this.delete = this.delete.bind(this);
+    this.update = this.update.bind(this);
+    this.findTransactionRelatedToAccountId =
+      this.findTransactionRelatedToAccountId.bind(this);
+  }
+
   add(acc: AccountAgg): TE.TaskEither<Error, void> {
     return pipe(
       TE.tryCatch(
@@ -44,6 +53,7 @@ export class PostgresAccountRepo implements AccountRepo {
             status: 'FINISH',
             source_account_id: id,
           });
+          console.log('transaction ', transInDM, transOutDM);
           return {
             transOutDM,
             transInDM,

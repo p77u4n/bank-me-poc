@@ -18,6 +18,7 @@ export const TransactionFinishValidate: Reader.Reader<
       async () => {
         const transactionRepo = datasource.getRepository(DMTransaction);
         const newTrans = await transactionRepo.findOneById(sessionId);
+        console.log('newTrans ', sessionId, newTrans);
         if (!newTrans) {
           throw new Error('TRANSACITON_NOT_FOUND');
         }

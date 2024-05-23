@@ -13,6 +13,7 @@ export const TransactionFailed: Reader.Reader<
   ({ sessionId, reason }) =>
     TE.tryCatch(
       async () => {
+        console.log('transasction failed handler');
         const transactionRepo = datasource.getRepository(DMTransaction);
         const newTrans = await transactionRepo.findOneById(sessionId);
         if (!newTrans) {

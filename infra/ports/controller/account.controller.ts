@@ -1,8 +1,11 @@
 import { AccountUsecaseCommand } from 'core/usecase/account.command';
 import { AccountQuerier } from 'core/usecase/account.query';
 import * as Either from 'fp-ts/Either';
+import * as Option from 'fp-ts/Option';
 import express from 'express';
 import { pipe } from 'fp-ts/lib/function';
+import { postgresDTsource } from 'infra/db-typeorm/datasource';
+import { DMTransaction } from 'infra/db-typeorm/entities';
 
 export const AccRoute = (
   accountCommand: AccountUsecaseCommand,
@@ -10,7 +13,7 @@ export const AccRoute = (
 ) => {
   const taskRoute = express.Router();
   taskRoute.post('/', async (req, res) => {
-    const userId = req.query.userId as string;
+    const userId = req.body.userId as string;
     const result = await accountCommand.openNewAccount({ userId })();
     pipe(
       result,
@@ -45,6 +48,31 @@ export const AccRoute = (
         },
       ),
     );
+  });
+  taskRoute.get('/:accountId', async (req, res) => {
+    const accountId = req.params.accountId;
+    const result = await accountQuery.getDetail({ accountId: accountId })();
+    pipe(
+      result,
+      Either.match(
+        (error) => {
+          res.status(400).send({ detail: error.message });
+        },
+        Option.match(
+          () => res.status(404).end(),
+          (acc) => res.status(200).send({ data: acc }),
+        ),
+      ),
+    );
+  });
+
+  taskRoute.get('/trans/:transactionId', async (req, res) => {
+    const transactionId = req.params.transactionId;
+    const dmTranRepo = postgresDTsource.getRepository(DMTransaction);
+    const trans = await dmTranRepo.findOneById(transactionId);
+    return trans
+      ? res.status(200).send({ data: trans })
+      : res.status(404).end();
   });
   taskRoute.get('/:accountId/transactions', async (req, res) => {
     const accountId = req.params.accountId;

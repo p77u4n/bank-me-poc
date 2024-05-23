@@ -8,7 +8,7 @@ import { Brand } from 'core/types';
 type TransactionDate = Brand<Date, 'TransactionDate'>;
 
 const isTransactionDate = (date: Date): date is TransactionDate =>
-  date < new Date(Date.now());
+  date <= new Date(Date.now());
 
 const parseTransDate = (date: Date) =>
   Either.fromPredicate(isTransactionDate, () => Error('INVALID_DATE'))(date);

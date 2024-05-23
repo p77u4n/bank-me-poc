@@ -13,7 +13,7 @@ export type TransactionStartEvent = DomainEvent<{
   amount: number;
 }>;
 
-export const TRANS_START_EVENT_NAME = 'transactionExecuted';
+export const TRANS_START_EVENT_NAME = 'transactionStart';
 
 export type TransactionValidateOKEvent = DomainEvent<{
   sessionId: UUID;
@@ -46,16 +46,16 @@ export const transferMoney =
     amount: number;
     sourceAcc: AccountAgg;
     targetAcc: AccountAgg;
+    sessionId: UUID;
   }) => {
     const date = new Date();
     const { amount, sourceAcc, targetAcc } = params;
-    const transactionId = uuidv4() as UUID;
     deps.eventBus.emit({
       name: TRANS_START_EVENT_NAME,
       data: {
-        sessionId: transactionId,
-        sourceAcc: sourceAcc.id,
-        targetAcc: targetAcc.id,
+        sessionId: params.sessionId,
+        sourceAccId: sourceAcc.id,
+        targetAccId: targetAcc.id,
         amount,
       },
     });
@@ -75,22 +75,23 @@ export const transferMoney =
     pipe(
       validateTrans,
       Either.match(
-        (e) =>
+        (e) => {
           deps.eventBus.emit<TransactionFailedEvent>({
             name: TRANS_FAILED_EVENT_NAME,
             data: {
-              sessionId: transactionId,
+              sessionId: params.sessionId,
               sourceAccId: sourceAcc.id,
               targetAccId: targetAcc.id,
               amount,
               reason: e,
             },
-          }),
+          });
+        },
         () =>
           deps.eventBus.emit<TransactionValidateOKEvent>({
             name: TRANS_VALIDATE_OKE_EVENT_NAME,
             data: {
-              sessionId: transactionId,
+              sessionId: params.sessionId,
               sourceAccId: sourceAcc.id,
               targetAccId: targetAcc.id,
               amount,
@@ -98,6 +99,7 @@ export const transferMoney =
           }),
       ),
     );
+    return validateTrans;
   };
 
 export const finishTransaction =

@@ -23,6 +23,7 @@ export interface AccountAgg {
   balance: Balance;
 }
 
+export const INIT_DEPOSIT_AMOUNT = 10 as Balance;
 export const ACCOUNT_INIT_SUCCESS = 'accountInitSuccess';
 
 export type AccountInitSuccessEvent = DomainEvent<{
@@ -79,7 +80,6 @@ const getBalanceFromTransactions = (
 
 export const openNewAccount =
   (eventBus: EventBus) => (params: { user: AggUser }) => {
-    const INIT_DEPOSIT_AMOUNT = 10;
     const validate = (user: AggUser) => {
       const isQualifiedToOpenAccount = () => {
         /// check if user is qualified for opening new account
@@ -135,7 +135,7 @@ const addTransactionOut = (
   return pipe(
     transactionOut,
     Either.chain((newTrans) => {
-      const isValidOut = newTrans.amount < acc.balance;
+      const isValidOut = newTrans.amount <= acc.balance;
       return isValidOut
         ? Either.right({
             ...acc,

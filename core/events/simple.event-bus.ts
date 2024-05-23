@@ -6,6 +6,8 @@ export class SimpleEventBus implements EventBus {
     string,
     ((eventProps: Record<string, any>) => TE.TaskEither<Error, any>)[]
   >;
+  invokings: TE.TaskEither<any, any>[];
+
   constructor() {
     this.subscribers = {};
   }

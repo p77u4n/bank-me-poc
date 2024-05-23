@@ -16,10 +16,13 @@ export const AccountInitFinishEventHandler: Reader.Reader<
         const newTransaction = new DMTransaction();
         newTransaction.id = sessionId; // idenpotent purpose
         newTransaction.amount = balance;
+        newTransaction.target_account_id = accountId;
+        newTransaction.status = 'FINISH';
         await datasource.transaction(async (entityMan) => {
           const transactionRepo = entityMan.getRepository(DMTransaction);
           const accountRepo = entityMan.getRepository(DMAccount);
           accountRepo.update(accountId, {
+            balance: balance,
             is_ready: true,
           });
           await transactionRepo.save(newTransaction);

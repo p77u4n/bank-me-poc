@@ -73,7 +73,7 @@ export class DMTransaction {
   targetAccount: DMAccount;
 
   @Column({
-    nullable: false,
+    nullable: true,
     type: 'uuid',
   })
   source_account_id: string;

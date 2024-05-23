@@ -11,6 +11,13 @@ export class PostgresUserRepo implements UserRepo {
   private userRepository: Repository<DMUser> =
     postgresDTsource.getRepository(DMUser);
 
+  constructor() {
+    this.add = this.add.bind(this);
+    this.findById = this.findById.bind(this);
+    this.delete = this.delete.bind(this);
+    this.update = this.update.bind(this);
+  }
+
   add(user: AggUser): TE.TaskEither<Error, void> {
     return pipe(
       TE.tryCatch(
@@ -72,7 +79,7 @@ export class PostgresUserRepo implements UserRepo {
     return parseAggUser({
       id: dmUser.id,
       name: dmUser.name,
-      accounts: dmUser.accounts.map((acc) => acc.id),
+      accounts: (dmUser.accounts || []).map((acc) => acc.id),
       // Add other KYC properties here
     });
   }

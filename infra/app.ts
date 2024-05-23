@@ -21,14 +21,12 @@ import { TransactionFailed } from './event-listener/transaction-failed';
 import { TransactionFinish } from './event-listener/transaction-finish';
 import { DefaultAccountQuery } from './usecase/account.query';
 import { DefaultUserUsecaseCommandHandler } from './usecase/user.command';
+import { AccountRepo } from 'core/repo/account.repo';
 
 configDotenv();
 
-const configEventSubs = (eventBus: EventBus) => {
-  eventBus.on(
-    TRANS_START_EVENT_NAME,
-    TransactionStart({ datasource: postgresDTsource }),
-  );
+const configEventSubs = (eventBus: EventBus, accountRepo: AccountRepo) => {
+  eventBus.on(TRANS_START_EVENT_NAME, TransactionStart());
   eventBus.on(
     TRANS_VALIDATE_OKE_EVENT_NAME,
     TransactionFinishValidate({ datasource: postgresDTsource, eventBus }),
@@ -39,7 +37,7 @@ const configEventSubs = (eventBus: EventBus) => {
   );
   eventBus.on(
     TRANS_FINISH_EVENT_NAME,
-    TransactionFinish({ datasource: postgresDTsource }),
+    TransactionFinish({ datasource: postgresDTsource, accountRepo }),
   );
   eventBus.on(
     ACCOUNT_INIT_SUCCESS,
@@ -49,9 +47,9 @@ const configEventSubs = (eventBus: EventBus) => {
 
 const getSingleRegistry: () => Registry = () => {
   const eventBus = new SimpleEventBus();
-  configEventSubs(eventBus);
   const userRepo = new PostgresUserRepo();
   const accountRepo = new PostgresAccountRepo();
+  configEventSubs(eventBus, accountRepo);
   return {
     accountCommandHandler: new DefaultAccountCommandHandler(
       accountRepo,

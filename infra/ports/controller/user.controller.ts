@@ -12,6 +12,7 @@ export const UserRoute = (userCommand: UserUsecaseCommand) => {
       result,
       Either.match(
         (error) => {
+          console.log('error occurence ', error);
           res.status(400).send({ detail: error.message });
         },
         (userCreateDTO) =>

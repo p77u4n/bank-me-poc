@@ -25,7 +25,8 @@ export const parseNES = (v: string) =>
 export type Balance = Brand<number, 'Balance'>;
 
 export function isValidBalance(v: number): v is Balance {
-  return v > 0;
+  console.log('BALANCE ', v);
+  return v >= 0;
 }
 
 export const parseBalance = (v: number) =>
